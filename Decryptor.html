@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL_UNIVERSAL_V4</title>
+    <style>
+        body { background-color: #050505; color: #ff0000; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { border: 2px solid #ff0000; padding: 30px; background-color: rgba(0,0,0,0.95); box-shadow: 0 0 35px #880000; width: 85%; max-width: 600px; }
+        h1 { text-align: center; font-size: 1.2rem; letter-spacing: 5px; text-shadow: 0 0 10px #ff0000; border-bottom: 2px solid #ff0000; padding-bottom: 10px; margin-top: 0; }
+        label { display: block; margin-top: 15px; font-size: 0.75rem; text-transform: uppercase; color: #aa0000; }
+        input, textarea { width: 100%; background: #000; border: 1px solid #660000; color: #ff3333; padding: 12px; margin-top: 5px; box-sizing: border-box; font-family: inherit; outline: none; resize: none; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .action-btn { padding: 15px; background: #330000; color: #ff0000; border: 1px solid #ff0000; cursor: pointer; font-weight: bold; font-family: inherit; }
+        .action-btn:active { background: #ff0000; color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>[ SYSTEM_UNIVERSAL_V4 ]</h1>
+    
+    <label>ACCESS_KEY:</label>
+    <input type="password" id="mKey" placeholder="ENTER_KEY...">
+
+    <label>DECRYPTED_DATA:</label>
+    <textarea id="pIn" rows="4"></textarea>
+
+    <div class="btn-group">
+        <button class="action-btn" onclick="run('enc')">ENCRYPT ↓</button>
+        <button class="action-btn" onclick="run('dec')">DECRYPT ↑</button>
+    </div>
+
+    <label>ENCRYPTED_DATA:</label>
+    <textarea id="cOut" rows="4"></textarea>
+</div>
+
+<script>
+    async function run(m) {
+        const p = document.getElementById('mKey').value;
+        if(!p) { alert("ERROR: NO_KEY"); return; }
+        
+        try {
+            const encoder = new TextEncoder();
+            const keyData = await crypto.subtle.digest('SHA-256', encoder.encode(p));
+            const key = await crypto.subtle.importKey('raw', keyData, {name: 'AES-GCM'}, false, ['encrypt', 'decrypt']);
+            const iv = new Uint8Array(12);
+
+            if (m === 'enc') {
+                const text = document.getElementById('pIn').value;
+                if(!text) return;
+                const enc = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key, encoder.encode(text));
+                document.getElementById('cOut').value = btoa(String.fromCharCode(...new Uint8Array(enc)));
+                document.getElementById('pIn').value = "";
+            } else {
+                const text = document.getElementById('cOut').value;
+                if(!text) return;
+                const data = new Uint8Array(atob(text).split("").map(c => c.charCodeAt(0)));
+                const dec = await crypto.subtle.decrypt({name: 'AES-GCM', iv}, key, data);
+                document.getElementById('pIn').value = new TextDecoder().decode(dec);
+                document.getElementById('cOut').value = "";
+            }
+        } catch(e) {
+            alert("FAILURE: WRONG_KEY OR BROWSER_SECURITY_BLOCK");
+        }
+    }
+</script>
+</body>
+</html>
